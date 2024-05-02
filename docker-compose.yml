@@ -1,0 +1,66 @@
+#
+# MIT License
+#
+# Copyright (c) 2024 Fernando Lemes da Silva
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+version: '3'
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=abc123
+      - MYSQL_DATABASE=auth
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=abc123
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+      start_period: 15s
+      interval: 5s
+      timeout: 5s
+      retries: 50
+  auth:
+    container_name: auth
+    image: auth
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - MYSQL_DATABASE=auth
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=abc123
+    deploy:
+      resources:
+        limits:
+          cpus: '0.7'
+          memory: 1024M
+    ports:
+      - 8080:8080
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:8080/health || exit 1
+      start_period: 60s
+      interval: 60s
+      timeout: 10s
+      retries: 10
